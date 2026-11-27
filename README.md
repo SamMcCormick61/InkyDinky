@@ -10,7 +10,7 @@ A draw-and-guess party game for the browser. One player picks a word and draws i
 
 1. Type your name and press **Host a game**. You get a 5-letter room code and an invite link.
 2. Send the link to friends (2 to 8 players). They open it, type their name and press **Join**.
-3. The host picks rounds and draw time and starts the game.
+3. The host picks the number of rounds and the time per turn (60 seconds by default), then starts the game.
 4. On your turn, pick one of three words and draw it. Everyone else sees your drawing live and types guesses.
    Faster guesses score more, and the drawer scores for every player who gets it.
 5. Hints reveal letters as time runs out. Close guesses are flagged just for you.
