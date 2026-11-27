@@ -18,6 +18,24 @@ A draw-and-guess party game for the browser. One player picks a word and draws i
 The host's browser runs the game, so the host needs to keep the page open. Players connect straight
 to the host over WebRTC using [PeerJS](https://peerjs.com/) and its free matchmaking server; no game data goes through a server.
 
+### Let Claude draw for you (online)
+
+Claude isn't a player. It's a helper the host can turn on. In the lobby, the host opens
+**🤖 Let Claude draw for players**, pastes their own Claude API key and picks:
+
+- **Level**: which Claude model draws (Opus draws best, Haiku is cheapest)
+- **Drawing speed**: *Very slow, like a person* by default
+- **Drawing style**: *Like a person* (a gentle wobble) or *Neat*
+- **Context clues**: on by default, so Claude adds things that go with the word, like water around a fish
+
+Then, on any player's turn, the word picker shows **🤖 Let Claude draw it for me**. Tick it and pick a word,
+and Claude draws that word stroke by stroke for everyone to guess. The drawer still scores as usual.
+When the turn ends, Claude's explanation of its context clues appears on the answer screen and in the chat.
+If Claude can't draw (for example the key has run out of credit), the drawer gets the pen back.
+
+Claude runs in the host's browser, so the key is only ever sent from there to Anthropic. At the end of a
+game the host sees roughly how much API credit Claude's drawings used.
+
 ### One device (pass and play)
 
 Press **Play on one device**, add everyone's names, then pass the device to whoever is drawing.
@@ -37,12 +55,14 @@ Each drawing costs roughly a cent or less, and the page shows the approximate co
 
 - `js/ai.js` – talks to Claude (official Anthropic SDK, vendored in `js/vendor/anthropic-sdk.mjs`) and parses the drawing commands
 - `js/pen.js` – plays strokes onto the canvas at hand speed, with optional wobble; it can also send them to other players
+- `js/artist.js` – Claude drawing a player's word in an online room (runs in the host's browser; `Host.setArtist` turns it on)
 
 ## Roadmap
 
 - [x] Core game on one device: canvas, pen, eraser, fill, colours, sizes, undo, clear, word choice, timer, guessing, scoring, turns
 - [x] Online rooms: a player hosts and friends join from a link on their own devices (peer to peer)
-- [~] Claude as a player and as a drawer that draws line by line (AI Lab done; next: add Claude to real games)
+- [x] Claude draws line by line: AI Lab, and in online games any drawer can let Claude draw their word
+- [ ] Claude in one-device games, and other AIs
 - [ ] Polish: more word lists, sounds, touch tweaks
 
 ## Code

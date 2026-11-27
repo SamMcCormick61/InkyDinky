@@ -156,6 +156,16 @@ input:focus, select:focus { outline: none; border-color: var(--ink-2); }
 .chips button:hover { background: #fff; color: var(--bad); }
 
 .settings { display: flex; gap: 12px; justify-content: center; margin-top: 12px; flex-wrap: wrap; }
+.reveal-note { background: #fff; border-radius: 10px; padding: 8px 12px; color: var(--text); text-align: left; }
+.ai-box { margin-top: 14px; padding: 10px 12px; border: 2px solid var(--line); border-radius: 12px; background: #fff; text-align: left; }
+.ai-box summary { cursor: pointer; font-weight: 700; color: var(--ink); }
+.ai-box .ai-key { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; font-size: .85rem; color: var(--muted); }
+.check.center { display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 14px; font-weight: 600; color: var(--ink); cursor: pointer; }
+.check.center input { width: 18px; height: 18px; }
+.ai-box .check { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: .85rem; color: var(--muted); }
+.ai-box .check input { width: auto; }
+.ai-box .btn { margin-top: 4px; }
+.ai-box .error { margin-bottom: 0; }
 .settings label { display: flex; flex-direction: column; gap: 4px; font-size: .85rem; color: var(--muted); text-align: left; }
 
 .choices { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 16px; }
