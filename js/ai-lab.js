@@ -55,6 +55,16 @@ document.querySelectorAll('[data-style]').forEach((b) => {
   });
 });
 
+let context = load('aiContext', false);
+document.querySelectorAll('[data-context]').forEach((b) => {
+  b.classList.toggle('on', (b.dataset.context === 'on') === context);
+  b.addEventListener('click', () => {
+    context = b.dataset.context === 'on';
+    save('aiContext', context);
+    document.querySelectorAll('[data-context]').forEach((x) => x.classList.toggle('on', x === b));
+  });
+});
+
 $('random-word').addEventListener('click', () => {
   $('word').value = WORDS[Math.floor(Math.random() * WORDS.length)];
 });
@@ -112,6 +122,7 @@ $('draw').addEventListener('click', async () => {
       client: c,
       model: $('model').value,
       word,
+      context,
       signal: controller.signal,
       onOp: (op) => {
         if (first) {
