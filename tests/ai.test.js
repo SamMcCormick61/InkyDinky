@@ -29,3 +29,16 @@ test('human style wobbles but stays close; neat style keeps the line', () => {
   const maxOff = Math.max(...human.points.map(([, y]) => Math.abs(y - 0.5) * 600));
   assert.ok(maxOff > 0.2 && maxOff < 4, `wobble ${maxOff}px`);
 });
+
+test('context clues setting changes the request', async () => {
+  const { drawWord } = await import('../js/ai.js');
+  const sent = [];
+  const fake = { beta: { messages: { stream: (body) => {
+    sent.push(body.messages[0].content);
+    return { on() {}, finalMessage: async () => ({ stop_reason: 'end_turn', content: [], usage: {} }) };
+  } } } };
+  await drawWord({ client: fake, model: 'claude-haiku-5-5', word: 'fish', context: true });
+  await drawWord({ client: fake, model: 'claude-haiku-5-5', word: 'fish' });
+  assert.match(sent[0], /^Draw: fish\n\nAlso draw the context/);
+  assert.match(sent[1], /^Draw: fish\n\nDraw only the thing itself/);
+});

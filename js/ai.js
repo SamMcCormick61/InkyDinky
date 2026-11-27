@@ -46,6 +46,11 @@ fill <colour> x,y
 Draw the way a person would in the game: the big recognisable outline first, then the key details, then a little colour. Use 6 to 30 strokes. Keep it simple and clear, centred, and filling most of the canvas.
 Never write letters, numbers or words, and never draw the word itself as text.`;
 
+// Extra instruction when "context clues" is on: draw the word's surroundings too.
+export const CONTEXT_HINT = `Also draw the context that goes with it, to help people guess: where it is usually found, what it is used with or does, or the setting around it. For example, a fish in water with bubbles and weeds, a snowman with snowflakes and a scarf, a key next to a lock, an astronaut with a rocket and stars. Draw the word itself first and biggest, then add 2 to 4 smaller context details around it. Still no letters, numbers or words.`;
+
+export const NO_CONTEXT_HINT = `Draw only the thing itself, with no background or extra objects.`;
+
 const GUESS_SYSTEM = `You are a guesser in a Pictionary-style party game. Look at the drawing and reply with your single best guess: one or two lowercase words, a common noun or verb, no punctuation and nothing else.`;
 
 export function makeClient(apiKey) {
@@ -84,7 +89,7 @@ export function parseLine(line) {
 
 // Asks Claude to draw a word. Calls onOp(op) for each finished command as it
 // streams in, and resolves with { ops, text, usage, cost, model }.
-export async function drawWord({ client, model, word, onOp = () => {}, signal }) {
+export async function drawWord({ client, model, word, context = false, onOp = () => {}, signal }) {
   const stream = client.beta.messages.stream(
     {
       model,
@@ -93,7 +98,7 @@ export async function drawWord({ client, model, word, onOp = () => {}, signal })
       betas: ['server-side-fallback-2026-07-01'],
       fallbacks: 'default',
       system: DRAW_SYSTEM,
-      messages: [{ role: 'user', content: `Draw: ${word}` }],
+      messages: [{ role: 'user', content: `Draw: ${word}\n\n${context ? CONTEXT_HINT : NO_CONTEXT_HINT}` }],
     },
     { signal },
   );
