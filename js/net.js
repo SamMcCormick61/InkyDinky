@@ -145,23 +145,51 @@ export async function hostRoom() {
 }
 
 // Join a room by code. Resolves to a connection.
-export async function joinRoom(code) {
+// onProgress(text) reports each step, so a failure says where it stopped.
+export async function joinRoom(code, onProgress = () => {}) {
   if (useLocalNet()) return joinLocal(code);
+  onProgress('Loading…');
   const Peer = await loadPeerJs();
   return new Promise((resolve, reject) => {
+    onProgress('Contacting the matchmaking server…');
     const peer = new Peer({ debug: 0 });
     let settled = false;
+    let stage = 'server';
     const fail = (err) => {
       if (settled) return;
       settled = true;
+      clearTimeout(timer);
       peer.destroy();
       reject(new Error(typeof err === 'string' ? err : friendlyPeerError(err)));
     };
-    const timer = setTimeout(() => fail("Couldn't connect to the host. Check the code and try again."), 15000);
+    const timeoutMessage = () => ({
+      server: "Couldn't reach the matchmaking server. Check your internet connection and try again.",
+      host: "Couldn't find the host. Check the code, and make sure the host's game is still open.",
+      link: "Found the room, but couldn't link to the host's device. Your networks may be blocking direct connections. Try both being on the same Wi-Fi.",
+    })[stage];
+    const timer = setTimeout(() => fail(timeoutMessage()), 25000);
     peer.once('error', fail);
     peer.once('open', () => {
+      stage = 'host';
+      onProgress('Looking for the room…');
       const dc = peer.connect(PREFIX + code.toLowerCase(), { reliable: true, serialization: 'json' });
+      // Watch the device-to-device link so a blocked network gives a clear message.
+      const watch = setInterval(() => {
+        const pc = dc.peerConnection;
+        if (!pc) return;
+        clearInterval(watch);
+        pc.addEventListener('iceconnectionstatechange', () => {
+          const st = pc.iceConnectionState;
+          if (st === 'checking') {
+            stage = 'link';
+            onProgress('Found the room. Linking to the host…');
+          } else if (st === 'failed') {
+            fail("Found the room, but couldn't link to the host's device. Your networks may be blocking direct connections. Try both being on the same Wi-Fi.");
+          }
+        });
+      }, 50);
       dc.once('open', () => {
+        clearInterval(watch);
         clearTimeout(timer);
         settled = true;
         const conn = wrapPeerConn(dc);

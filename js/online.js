@@ -85,7 +85,7 @@ export function startOnline(board, { onLocal }) {
     busy(true, 'Joining…');
     try {
       code = c;
-      connect(await joinRoom(c), name, false);
+      connect(await joinRoom(c, (text) => busy(true, text)), name, false);
     } catch (err) {
       busy(false, err.message);
     }
