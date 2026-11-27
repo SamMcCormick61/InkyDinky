@@ -8,7 +8,7 @@ import { Host } from './host.js';
 import { VERSION } from './version.js';
 import {
   $, showScreen, setHint, setTimer, setRound, renderPlayers, clearChat, addChat, addLine,
-  renderReveal, renderRanking, renderChoices, setToolbar, load, save,
+  renderReveal, renderRanking, renderChoices, setToolbar, load, save, loadKey, saveKey,
 } from './ui.js';
 
 export function startOnline(board, { onLocal }) {
@@ -213,12 +213,22 @@ export function startOnline(board, { onLocal }) {
       case 'correct':
         addLine(ev.playerId === me ? `You got it! +${ev.points}` : `${nameOf(ev.playerId)} guessed it!`, 'good');
         break;
+      case 'ainote':
+        addLine(`💡 Claude's clues: ${ev.text}`);
+        $('reveal-note').textContent = `💡 Claude's clues: ${ev.text}`;
+        $('reveal-note').hidden = false;
+        break;
       case 'reveal':
+        $('reveal-note').hidden = true;
         if (ev.word) addLine(`The word was “${ev.word}”.`);
         renderReveal({ word: ev.word, reason: ev.reason, points: ev.points, players: state?.players ?? [] });
         break;
       case 'gameover':
         renderRanking(ev.ranking);
+        if (artist?.spent > 0) {
+          addLine(`🤖 Claude's drawings used about $${artist.spent.toFixed(2)} of your API credit this game.`);
+          artist.spent = 0;
+        }
         break;
     }
   }
@@ -226,7 +236,7 @@ export function startOnline(board, { onLocal }) {
   // ---------- drawing out ----------
 
   board.on((ev) => {
-    if (!state || state.drawerId !== me || state.phase !== 'drawing') return;
+    if (!state || state.drawerId !== me || state.phase !== 'drawing' || state.aiDrawing) return;
     if (ev.type === 'live') send({ t: 'live', start: ev.start, color: ev.color, size: ev.size, points: ev.points });
     else if (ev.type === 'op') send({ t: 'op', op: ev.op });
     else if (ev.type === 'undo') send({ t: 'undo' });
@@ -248,7 +258,7 @@ export function startOnline(board, { onLocal }) {
     if (s.phase === 'lobby') setRound(0);
     else setRound(s.round, s.rounds);
 
-    const canDraw = s.phase === 'drawing' && drawing;
+    const canDraw = s.phase === 'drawing' && drawing && !s.aiDrawing;
     if (board.enabled !== canDraw) board.setEnabled(canDraw);
     setToolbar(canDraw);
 
@@ -257,7 +267,7 @@ export function startOnline(board, { onLocal }) {
 
     const meGuessed = s.players.find((p) => p.id === me)?.guessed;
     if (s.phase === 'drawing') {
-      if (drawing) setHint(`Draw: ${s.word}`, true);
+      if (drawing) setHint(s.aiDrawing ? `🤖 Claude is drawing: ${s.word}` : `Draw: ${s.word}`, true);
       else if (meGuessed) setHint(s.word, true);
       else setHint(s.hint);
     }
@@ -278,7 +288,8 @@ export function startOnline(board, { onLocal }) {
       case 'choosing':
         if (drawing && s.choices) {
           setHint("It's your turn to draw!", true);
-          renderChoices(s.choices, (i) => send({ t: 'choose', index: i }));
+          $('ai-choose-wrap').hidden = !s.aiAvailable;
+          renderChoices(s.choices, (i) => send({ t: 'choose', index: i, ai: Boolean(s.aiAvailable && $('ai-choose').checked) }));
           showScreen('choose');
         } else {
           setHint(`${nameOf(s.drawerId)} is choosing a word…`, true);
@@ -337,6 +348,91 @@ export function startOnline(board, { onLocal }) {
   });
   $('again').addEventListener('click', () => {
     send({ t: 'start', settings: { rounds: $('online-rounds').value, drawTime: $('online-time').value } });
+  });
+
+  // ---------- Claude drawing for players (set up by the host) ----------
+  //
+  // Claude isn't a player. The host turns it on with their own API key, and
+  // then any drawer can pick "Let Claude draw it". Claude runs in the host's
+  // browser, so the key never leaves it except to go to Anthropic.
+
+  let artist = null;
+  let artistLib = null;
+  const stored = loadKey();
+  $('ai-key').value = stored.key;
+  $('ai-remember').checked = stored.remembered;
+
+  function loadArtistLib() {
+    if (!artistLib) {
+      artistLib = Promise.all([import('./artist.js'), import('./ai.js')]).then(([lib, ai]) => {
+        const saved = { ...lib.DEFAULT_ARTIST_SETTINGS, ...load('artistSettings', {}) };
+        for (const m of ai.MODELS) $('ai-model').append(new Option(m.label, m.id));
+        for (const [id, sp] of Object.entries(lib.SPEEDS)) $('ai-speed').append(new Option(sp.label, id));
+        $('ai-model').value = ai.MODELS.some((m) => m.id === saved.model) ? saved.model : lib.DEFAULT_ARTIST_SETTINGS.model;
+        $('ai-speed').value = lib.SPEEDS[saved.speed] ? saved.speed : lib.DEFAULT_ARTIST_SETTINGS.speed;
+        $('ai-style').value = saved.style === 'neat' ? 'neat' : 'human';
+        $('ai-context').value = saved.context ? 'on' : 'off';
+        return lib;
+      });
+      artistLib.catch((err) => {
+        artistLib = null;
+        $('ai-error').textContent = `Couldn't load Claude: ${err.message}`;
+      });
+    }
+    return artistLib;
+  }
+
+  function artistSettings() {
+    return {
+      model: $('ai-model').value,
+      speed: $('ai-speed').value,
+      style: $('ai-style').value,
+      context: $('ai-context').value === 'on',
+    };
+  }
+
+  function showArtist() {
+    $('ai-add').textContent = artist ? 'Turn Claude off' : 'Turn Claude on';
+    $('ai-add').classList.toggle('ghost', Boolean(artist));
+    $('ai-summary').textContent = artist ? '🤖 Claude can draw for players ✓' : '🤖 Let Claude draw for players';
+  }
+
+  $('ai-box').addEventListener('toggle', () => $('ai-box').open && loadArtistLib());
+  for (const id of ['ai-model', 'ai-speed', 'ai-style', 'ai-context']) {
+    $(id).addEventListener('change', () => {
+      const settings = artistSettings();
+      save('artistSettings', settings);
+      artist?.update(settings);
+    });
+  }
+  const keyChanged = () => {
+    const key = $('ai-key').value.trim();
+    saveKey(key, $('ai-remember').checked);
+    if (key) artist?.setKey(key);
+  };
+  $('ai-key').addEventListener('change', keyChanged);
+  $('ai-remember').addEventListener('change', keyChanged);
+
+  $('ai-add').addEventListener('click', async () => {
+    $('ai-error').textContent = '';
+    if (artist) {
+      artist = null;
+      host?.setArtist(null);
+      showArtist();
+      return;
+    }
+    const key = $('ai-key').value.trim();
+    if (!key) {
+      $('ai-error').textContent = 'Paste your Claude API key first.';
+      $('ai-key').focus();
+      return;
+    }
+    if (!host) return;
+    keyChanged();
+    const lib = await loadArtistLib();
+    artist = new lib.ClaudeArtist({ apiKey: key, settings: artistSettings() });
+    host.setArtist(artist);
+    showArtist();
   });
 
   // ---------- guessing ----------

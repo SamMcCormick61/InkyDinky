@@ -66,6 +66,27 @@
                   <select id="online-time"><option value="45">45s</option><option value="60">60s</option><option value="80" selected>80s</option><option value="100">100s</option><option value="120">120s</option></select>
                 </label>
               </div>
+              <details id="ai-box" class="ai-box">
+                <summary><span id="ai-summary">🤖 Let Claude draw for players</span></summary>
+                <p class="muted small">When it's their turn, any player can choose to have Claude draw their word for them, stroke by stroke like a person.</p>
+                <label class="ai-key">Your Claude API key
+                  <input id="ai-key" type="password" placeholder="sk-ant-…" autocomplete="off" spellcheck="false">
+                </label>
+                <label class="check"><input id="ai-remember" type="checkbox"> Remember the key on this device</label>
+                <div class="settings">
+                  <label>Level <select id="ai-model"></select></label>
+                  <label>Drawing speed <select id="ai-speed"></select></label>
+                  <label>Drawing style
+                    <select id="ai-style"><option value="human">Like a person</option><option value="neat">Neat</option></select>
+                  </label>
+                  <label>Context clues
+                    <select id="ai-context"><option value="on">On</option><option value="off">Off</option></select>
+                  </label>
+                </div>
+                <p class="muted small">Claude runs in your browser and uses your API credit. The key is only sent to Anthropic.</p>
+                <button id="ai-add" class="btn" type="button">Turn Claude on</button>
+                <p id="ai-error" class="error" role="alert"></p>
+              </details>
               <button id="start-online" class="btn big" type="button" disabled>Waiting for players…</button>
             </div>
             <p id="guest-wait" class="muted">Waiting for the host to start the game…</p>
@@ -112,6 +133,7 @@
           <div class="panel" data-screen="choose">
             <h1>Pick a word to draw</h1>
             <div id="choices" class="choices"></div>
+            <label id="ai-choose-wrap" class="check center" hidden><input id="ai-choose" type="checkbox"> 🤖 Let Claude draw it for me</label>
           </div>
 
           <!-- Answer between turns -->
@@ -119,6 +141,7 @@
             <p class="muted" id="reveal-reason"></p>
             <h1>The word was <span id="reveal-word" class="accent"></span></h1>
             <ul id="reveal-points" class="points"></ul>
+            <p id="reveal-note" class="reveal-note small" hidden></p>
             <p class="muted small">Next turn in <span id="reveal-count"></span>…</p>
           </div>
 

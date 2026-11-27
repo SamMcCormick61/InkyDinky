@@ -1,7 +1,7 @@
 // AI Lab: try Claude as a drawer and a guesser, outside a real game.
 
 import { DrawingBoard } from './canvas.js';
-import { buildToolbar, setToolbar, load, save } from './ui.js';
+import { buildToolbar, setToolbar, load, save, loadKey, saveKey } from './ui.js';
 import { WORDS } from './words.js';
 import { VERSION } from './version.js';
 import { MODELS, makeClient, drawWord, guessDrawing, friendlyError } from './ai.js';
@@ -26,21 +26,12 @@ for (const m of MODELS) {
 $('model').value = load('aiModel', MODELS[0].id);
 $('model').addEventListener('change', () => save('aiModel', $('model').value));
 
-let keyInSession = '';
-try {
-  keyInSession = sessionStorage.getItem('inkydinky.key') || '';
-} catch { /* ignore */ }
-const savedKey = load('apiKey', '');
-$('api-key').value = savedKey || keyInSession;
-$('remember').checked = Boolean(savedKey);
+const stored = loadKey();
+$('api-key').value = stored.key;
+$('remember').checked = stored.remembered;
 
 function rememberKey() {
-  const key = $('api-key').value.trim();
-  try {
-    sessionStorage.setItem('inkydinky.key', key);
-  } catch { /* ignore */ }
-  if ($('remember').checked) save('apiKey', key);
-  else save('apiKey', '');
+  saveKey($('api-key').value.trim(), $('remember').checked);
 }
 $('api-key').addEventListener('change', rememberKey);
 $('remember').addEventListener('change', rememberKey);

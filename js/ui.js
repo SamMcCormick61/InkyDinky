@@ -210,3 +210,22 @@ export function save(key, value) {
     /* private mode */
   }
 }
+
+// ----- Claude API key (shared by the AI Lab and online games) -----
+
+// The key always lasts for this tab; "remember" also keeps it on this device.
+export function loadKey() {
+  let inTab = '';
+  try {
+    inTab = sessionStorage.getItem('inkydinky.key') || '';
+  } catch { /* ignore */ }
+  const saved = load('apiKey', '');
+  return { key: saved || inTab, remembered: Boolean(saved) };
+}
+
+export function saveKey(key, remember) {
+  try {
+    sessionStorage.setItem('inkydinky.key', key);
+  } catch { /* ignore */ }
+  save('apiKey', remember ? key : '');
+}
