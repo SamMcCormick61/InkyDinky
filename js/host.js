@@ -1,0 +1,198 @@
+// Runs an online room inside the host's browser.
+//
+// The host owns the one true copy of the game. Players (including the host's
+// own player, through a loopback connection) send requests; the host checks
+// them against the rules and tells everyone what happened.
+
+import { Game, DEFAULT_SETTINGS } from './game.js';
+import { WORDS } from './words.js';
+
+const CHOOSE_SECONDS = 15;
+
+export class Host {
+  constructor(room) {
+    this.room = room;
+    this.game = new Game({ words: WORDS });
+    this.clients = new Map(); // conn -> playerId (null until hello)
+    this.ops = [];            // the current drawing, for players who join mid-turn
+    this.ticker = null;
+    this.hostPlayerId = null;
+    this.game.on((ev) => this.onGameEvent(ev));
+    room.onConnection((conn) => this.accept(conn));
+  }
+
+  accept(conn) {
+    this.clients.set(conn, null);
+    conn.onMessage((msg) => this.onMessage(conn, msg));
+    conn.onClose(() => this.drop(conn));
+  }
+
+  drop(conn) {
+    const id = this.clients.get(conn);
+    this.clients.delete(conn);
+    if (!id) return;
+    const player = this.game.player(id);
+    if (player) this.broadcast({ t: 'note', text: `${player.name} left.` });
+    const wasDrawer = id === this.game.drawerId;
+    this.game.removePlayer(id);
+    if (wasDrawer) this.ops = [];
+    this.syncAll();
+  }
+
+  idOf(conn) {
+    return this.clients.get(conn);
+  }
+
+  // ----- incoming -----
+
+  onMessage(conn, msg) {
+    if (!msg || typeof msg !== 'object') return;
+    const id = this.idOf(conn);
+    const g = this.game;
+
+    if (msg.t === 'hello') {
+      if (id) return;
+      try {
+        const player = g.addPlayer(msg.name);
+        this.clients.set(conn, player.id);
+        if (msg.isHost && !this.hostPlayerId) this.hostPlayerId = player.id;
+        conn.send({ t: 'welcome', id: player.id, hostId: this.hostPlayerId, code: this.room.code });
+        conn.send({ t: 'board', ops: this.ops });
+        this.broadcast({ t: 'note', text: `${player.name} joined.` }, conn);
+        this.syncAll();
+      } catch (err) {
+        conn.send({ t: 'reject', reason: err.message });
+        setTimeout(() => conn.close(), 500);
+      }
+      return;
+    }
+    if (!id) return;
+    const isDrawer = id === g.drawerId;
+    const isHost = id === this.hostPlayerId;
+
+    switch (msg.t) {
+      case 'start':
+        if (!isHost || !(g.phase === 'lobby' || g.phase === 'gameover')) return;
+        g.settings = { ...g.settings, ...pickSettings(msg.settings) };
+        try {
+          g.start();
+        } catch (err) {
+          conn.send({ t: 'note', text: err.message });
+        }
+        break;
+      case 'choose':
+        if (isDrawer && g.phase === 'choosing') g.chooseWord(Number(msg.index));
+        break;
+      case 'guess': {
+        const result = g.guess(id, msg.text);
+        if (result.kind === 'hidden') conn.send({ t: 'note', text: "Shh, don't give the word away!" });
+        break;
+      }
+      case 'live':
+        if (isDrawer && g.phase === 'drawing') this.broadcast(msg, conn);
+        break;
+      case 'op':
+        if (isDrawer && g.phase === 'drawing' && msg.op) {
+          this.ops.push(msg.op);
+          this.broadcast({ t: 'op', op: msg.op }, conn);
+        }
+        break;
+      case 'undo':
+        if (isDrawer && g.phase === 'drawing' && this.ops.length) {
+          this.ops.pop();
+          this.broadcast({ t: 'undo' }, conn);
+        }
+        break;
+    }
+  }
+
+  // ----- game events out -----
+
+  onGameEvent(ev) {
+    const g = this.game;
+    switch (ev.type) {
+      case 'start':
+        this.broadcast({ t: 'ev', ev: { type: 'start' } });
+        break;
+      case 'turn':
+        this.ops = [];
+        this.broadcast({ t: 'board', ops: [] });
+        this.broadcast({ t: 'ev', ev: { type: 'turn', drawerId: ev.drawerId, round: ev.round } });
+        this.startTicker();
+        // Pick a word for a drawer who doesn't choose in time.
+        clearTimeout(this.chooseTimer);
+        this.chooseTimer = setTimeout(() => {
+          if (g.phase === 'choosing' && g.drawerId === ev.drawerId) {
+            g.chooseWord(Math.floor(Math.random() * g.choices.length));
+          }
+        }, CHOOSE_SECONDS * 1000);
+        break;
+      case 'drawing':
+        clearTimeout(this.chooseTimer);
+        this.broadcast({ t: 'ev', ev: { type: 'drawing', drawerId: ev.drawerId } });
+        break;
+      case 'chat':
+        this.broadcast({ t: 'ev', ev: { type: 'chat', playerId: ev.playerId, text: ev.text } });
+        break;
+      case 'close':
+        // Only the person who guessed needs to know they were close.
+        this.sendTo(ev.playerId, { t: 'ev', ev: { type: 'close', text: ev.text } });
+        break;
+      case 'correct':
+        this.broadcast({ t: 'ev', ev: { type: 'correct', playerId: ev.playerId, points: ev.points } });
+        break;
+      case 'reveal':
+        this.broadcast({ t: 'ev', ev: { type: 'reveal', word: ev.word, reason: ev.reason, points: ev.points } });
+        break;
+      case 'gameover':
+        this.stopTicker();
+        this.broadcast({ t: 'ev', ev: { type: 'gameover', ranking: ev.ranking.map(({ id, name, score }) => ({ id, name, score })) } });
+        break;
+    }
+    this.syncAll();
+  }
+
+  startTicker() {
+    if (this.ticker) return;
+    this.ticker = setInterval(() => this.game.tick(), 1000);
+  }
+
+  stopTicker() {
+    clearTimeout(this.chooseTimer);
+    clearInterval(this.ticker);
+    this.ticker = null;
+  }
+
+  // ----- sending -----
+
+  syncAll() {
+    for (const [conn, id] of this.clients) {
+      if (id) conn.send({ t: 'state', state: { ...this.game.snapshot(id), hostId: this.hostPlayerId, settings: this.game.settings } });
+    }
+  }
+
+  broadcast(msg, except = null) {
+    for (const [conn, id] of this.clients) {
+      if (id && conn !== except) conn.send(msg);
+    }
+  }
+
+  sendTo(playerId, msg) {
+    for (const [conn, id] of this.clients) if (id === playerId) conn.send(msg);
+  }
+
+  close() {
+    this.stopTicker();
+    for (const conn of this.clients.keys()) conn.close();
+    this.room.close();
+  }
+}
+
+function pickSettings(s = {}) {
+  const out = {};
+  const rounds = Number(s.rounds);
+  const drawTime = Number(s.drawTime);
+  if (rounds >= 1 && rounds <= 10) out.rounds = Math.round(rounds);
+  if (drawTime >= 20 && drawTime <= 240) out.drawTime = Math.round(drawTime);
+  return { ...DEFAULT_SETTINGS, ...out, revealTime: DEFAULT_SETTINGS.revealTime };
+}

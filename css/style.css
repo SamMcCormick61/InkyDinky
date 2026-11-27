@@ -167,6 +167,18 @@ input:focus, select:focus { outline: none; border-color: var(--ink-2); }
 .ranking li { font-size: 1.1rem; }
 .ranking li:first-child { font-weight: 800; color: var(--ink); font-size: 1.3rem; }
 
+input.wide { width: 100%; margin: 12px 0 4px; text-align: center; font-size: 1.1rem; }
+.home-actions { display: flex; flex-direction: column; gap: 4px; align-items: stretch; }
+.home-actions .btn.big { margin-top: 8px; }
+.home-actions #join-code { text-transform: uppercase; letter-spacing: .2em; text-align: center; font-weight: 700; }
+.or { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: .85rem; margin: 8px 0 4px; }
+.or::before, .or::after { content: ""; flex: 1; border-top: 1px solid var(--line); }
+.code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 2.4rem; font-weight: 800; letter-spacing: .3em; color: var(--ink); margin: 0 0 12px; }
+#room-link { font-size: .9rem; color: var(--muted); }
+.link { background: none; border: 0; color: var(--ink-2); cursor: pointer; font-weight: 600; padding: 4px; }
+.link:hover { text-decoration: underline; }
+.mode-online #guesser { display: none; }
+
 /* ----- toolbar ----- */
 .toolbar {
   display: flex;

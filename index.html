@@ -29,7 +29,54 @@
 
         <!-- Overlays shown on top of the canvas -->
         <div id="overlay" class="overlay">
-          <!-- Lobby -->
+          <!-- Start screen -->
+          <div class="panel" data-screen="home">
+            <h1>Draw it. Guess it.</h1>
+            <p class="muted">Pick a word, draw it, and race your friends to guess what it is.</p>
+            <input id="my-name" class="wide" maxlength="20" placeholder="Your name" autocomplete="nickname">
+            <div class="home-actions">
+              <button id="host-btn" class="btn big" type="button">Host a game</button>
+              <div class="or"><span>or join one</span></div>
+              <form id="join-form" class="row">
+                <input id="join-code" maxlength="5" placeholder="Room code" autocomplete="off" autocapitalize="characters" spellcheck="false">
+                <button class="btn" type="submit">Join</button>
+              </form>
+              <button id="local-btn" class="btn ghost" type="button">Play on one device</button>
+            </div>
+            <p id="home-error" class="error" role="alert"></p>
+          </div>
+
+          <!-- Online lobby -->
+          <div class="panel" data-screen="online-lobby">
+            <p class="muted">Room code</p>
+            <div id="room-code" class="code"></div>
+            <div class="row">
+              <input id="room-link" readonly aria-label="Invite link">
+              <button id="copy-link" class="btn" type="button">Copy link</button>
+            </div>
+            <p class="muted small">Send the link to friends so they can join on their own phone or computer.</p>
+            <div id="host-controls">
+              <div class="settings">
+                <label>Rounds
+                  <select id="online-rounds"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option></select>
+                </label>
+                <label>Draw time
+                  <select id="online-time"><option value="45">45s</option><option value="60">60s</option><option value="80" selected>80s</option><option value="100">100s</option><option value="120">120s</option></select>
+                </label>
+              </div>
+              <button id="start-online" class="btn big" type="button" disabled>Waiting for players…</button>
+            </div>
+            <p id="guest-wait" class="muted">Waiting for the host to start the game…</p>
+          </div>
+
+          <!-- General message (waiting, errors, disconnected) -->
+          <div class="panel" data-screen="message">
+            <h1 id="msg-title"></h1>
+            <p id="msg-text" class="muted"></p>
+            <button id="msg-btn" class="btn big" type="button" hidden>Back to start</button>
+          </div>
+
+          <!-- One-device lobby -->
           <div class="panel" data-screen="lobby">
             <h1>Let's draw!</h1>
             <p class="muted">Add everyone who's playing on this device, then pass it round as you take turns.</p>
@@ -48,6 +95,7 @@
               </label>
             </div>
             <button id="start" class="btn big" type="button" disabled>Start game</button>
+            <p><button id="local-back" class="link" type="button">← Back</button></p>
           </div>
 
           <!-- Hand the device over -->
@@ -76,6 +124,7 @@
           <div class="panel" data-screen="gameover">
             <h1>Game over</h1>
             <ol id="ranking" class="ranking"></ol>
+            <p id="gameover-wait" class="muted" hidden>Waiting for the host to start another game…</p>
             <div class="row center">
               <button id="again" class="btn big" type="button">Play again</button>
               <button id="new-players" class="btn ghost" type="button">Change players</button>
