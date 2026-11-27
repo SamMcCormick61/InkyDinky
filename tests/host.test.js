@@ -147,3 +147,62 @@ test('if Claude fails, the drawer gets the pen back', async () => {
   assert.equal(host2.ops.length, 1, 'the drawer can draw again');
   host2.close();
 });
+
+test('a Claude player guesses like a person, then draws on its own turn', async () => {
+  const { ClaudePlayer } = await import('../js/bot.js');
+  const wait = (ms = 10) => new Promise((r) => setTimeout(r, ms));
+  const host = new Host(makeRoom());
+  try {
+    const sam = join(host, 'Sam', true);
+    await tick();
+    const asked = [];
+    const artist = {
+      ...fakeArtist(),
+      async guess({ avoid }) {
+        asked.push([...avoid]);
+        return { guess: asked.length === 1 ? 'boat' : host.game.word };
+      },
+    };
+    host.setArtist(artist);
+    const board = {
+      ops: [], canvas: {},
+      load(ops) { this.ops = [...ops]; }, liveStart() {}, liveAppend() {},
+      remoteOp(op) { this.ops.push(op); }, remoteUndo() { this.ops.pop(); },
+    };
+    const bot = new ClaudePlayer({ artist, makeBoard: () => board, timing: { chooseMs: 0, firstGuessMs: 0, guessEveryMs: 0, jitterMs: 0 } });
+    bot.join(host);
+    await tick();
+    const claude = host.game.players.find((p) => p.name === 'Claude');
+    assert.equal(claude.isAI, true);
+
+    // Sam joined first, so Sam draws first and Claude guesses.
+    sam.send({ t: 'start', settings: { rounds: 1, drawTime: 60 } });
+    await tick();
+    sam.send({ t: 'choose', index: 0 });
+    await wait();
+    assert.equal(asked.length, 0, 'no guessing at an empty canvas');
+
+    const stroke = (x) => ({ type: 'stroke', color: '#000000', size: 7, points: [[x, x], [x + 0.1, x + 0.1]] });
+    sam.send({ t: 'op', op: stroke(0.1) });
+    await wait();
+    const chat = () => sam.inbox.filter((m) => m.t === 'ev' && m.ev.type === 'chat').map((m) => m.ev.text);
+    assert.deepEqual(chat(), ['boat'], 'a wrong guess shows in the chat');
+
+    const word = host.game.word;
+    sam.send({ t: 'op', op: stroke(0.4) });
+    await wait();
+    assert.deepEqual(asked[1], ['boat'], 'Claude is told what it already tried');
+    assert.ok(!chat().includes(word), 'the right guess is not shown');
+    assert.ok(sam.inbox.some((m) => m.t === 'ev' && m.ev.type === 'correct' && m.ev.playerId === claude.id));
+
+    // Everyone guessed, so after the reveal it's Claude's turn: it picks a word and Claude draws it.
+    for (let i = 0; i < 6 && host.game.drawerId !== claude.id; i++) host.game.tick();
+    assert.equal(host.game.drawerId, claude.id);
+    await wait();
+    assert.equal(host.game.phase, 'drawing');
+    assert.deepEqual(artist.calls, [host.game.word]);
+    assert.equal(sam.last('state').state.aiDrawing, true);
+  } finally {
+    host.close();
+  }
+});

@@ -33,6 +33,11 @@ and Claude draws that word stroke by stroke for everyone to guess. The drawer st
 When the turn ends, Claude's explanation of its context clues appears on the answer screen and in the chat.
 If Claude can't draw (for example the key has run out of credit), the drawer gets the pen back.
 
+Once Claude is on, the host can also press **Add Claude as a player**. Claude then joins the room like a
+person: on other players' turns it looks at the drawing every so often and types a guess, so its wrong
+guesses show in the chat and a right one just shows "Claude guessed it!". On its own turn it picks a word
+and draws it with the settings above. It uses the host's key too.
+
 Claude runs in the host's browser, so the key is only ever sent from there to Anthropic. At the end of a
 game the host sees roughly how much API credit Claude's drawings used.
 
@@ -56,12 +61,14 @@ Each drawing costs roughly a cent or less, and the page shows the approximate co
 - `js/ai.js` – talks to Claude (official Anthropic SDK, vendored in `js/vendor/anthropic-sdk.mjs`) and parses the drawing commands
 - `js/pen.js` – plays strokes onto the canvas at hand speed, with optional wobble; it can also send them to other players
 - `js/artist.js` – Claude drawing a player's word in an online room (runs in the host's browser; `Host.setArtist` turns it on)
+- `js/bot.js` – Claude as a player: joins the room through a loopback connection, guesses and draws
 
 ## Roadmap
 
 - [x] Core game on one device: canvas, pen, eraser, fill, colours, sizes, undo, clear, word choice, timer, guessing, scoring, turns
 - [x] Online rooms: a player hosts and friends join from a link on their own devices (peer to peer)
 - [x] Claude draws line by line: AI Lab, and in online games any drawer can let Claude draw their word
+- [x] Claude as a player in online games (guesses and draws like a person)
 - [ ] Claude in one-device games, and other AIs
 - [ ] Polish: more word lists, sounds, touch tweaks
 

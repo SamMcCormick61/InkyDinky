@@ -19,6 +19,7 @@ export class Host {
     this.room = room;
     this.game = new Game({ words: WORDS });
     this.clients = new Map(); // conn -> playerId (null until hello)
+    this.bots = new Set();    // connections from Claude players run in this browser
     this.ops = [];            // the current drawing, for players who join mid-turn
     this.ticker = null;
     this.hostPlayerId = null;
@@ -29,8 +30,10 @@ export class Host {
     room.onConnection((conn) => this.accept(conn));
   }
 
-  accept(conn) {
+  // opts.bot marks a Claude player that this browser runs itself.
+  accept(conn, { bot = false } = {}) {
     this.clients.set(conn, null);
+    if (bot) this.bots.add(conn);
     conn.onMessage((msg) => this.onMessage(conn, msg));
     conn.onClose(() => this.drop(conn));
   }
@@ -38,6 +41,7 @@ export class Host {
   drop(conn) {
     const id = this.clients.get(conn);
     this.clients.delete(conn);
+    this.bots.delete(conn);
     if (!id) return;
     const player = this.game.player(id);
     if (player) this.broadcast({ t: 'note', text: `${player.name} left.` });
@@ -68,7 +72,7 @@ export class Host {
     if (msg.t === 'hello') {
       if (id) return;
       try {
-        const player = g.addPlayer(msg.name);
+        const player = g.addPlayer(msg.name, { isAI: this.bots.has(conn) });
         this.clients.set(conn, player.id);
         if (msg.isHost && !this.hostPlayerId) this.hostPlayerId = player.id;
         conn.send({ t: 'welcome', id: player.id, hostId: this.hostPlayerId, code: this.room.code, version: VERSION });
@@ -196,7 +200,8 @@ export class Host {
         this.broadcast({ t: 'op', op });
       },
     };
-    this.broadcast({ t: 'note', text: `🤖 Claude is drawing for ${g.player(drawerId)?.name ?? 'the drawer'}.` });
+    const drawer = g.player(drawerId);
+    this.broadcast({ t: 'note', text: drawer?.isAI ? '🤖 Claude is drawing.' : `🤖 Claude is drawing for ${drawer?.name ?? 'the drawer'}.` });
     try {
       ai.job = this.artist.draw({ word: g.word, out, signal: ctrl.signal });
     } catch (err) {
