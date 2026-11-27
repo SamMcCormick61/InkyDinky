@@ -29,6 +29,7 @@ Open **ai-lab.html** (there's a link on the start screen). Paste your own Claude
 press **Draw it**. Claude writes simple drawing commands, one stroke per line, and the page draws each line
 as soon as it arrives, at hand speed. **Like a person** adds a gentle wobble; **Neat** draws Claude's lines exactly.
 **+ Context clues** asks Claude to add things that go with the word (water and bubbles around a fish, snowflakes around a snowman); **Just the word** draws the thing on its own.
+With context clues on, once the drawing is finished Claude explains which clues it drew and why.
 **Ask Claude to guess** sends the canvas to Claude, so you can also draw something yourself and see if Claude gets it.
 
 Your key stays in your browser (optionally remembered on that device) and is only sent to Anthropic.

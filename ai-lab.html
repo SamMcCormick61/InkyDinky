@@ -23,6 +23,8 @@
     .status.err { color: var(--bad); }
     .guess-out { font-size: 1.3rem; font-weight: 800; color: var(--ink-2); text-align: center; min-height: 1.6em; }
     details pre { white-space: pre-wrap; word-break: break-all; font-size: .75rem; background: var(--bg); padding: 8px; border-radius: 8px; max-height: 180px; overflow: auto; }
+    .notes { background: var(--warn-soft); border-radius: 10px; padding: 10px 12px; font-size: .9rem; }
+    .notes p { margin: 4px 0 0; }
     .stats { font-size: .8rem; color: var(--muted); }
     .keyrow { display: flex; gap: 6px; align-items: center; font-size: .8rem; color: var(--muted); }
     .keyrow input { width: auto; }
@@ -102,6 +104,10 @@
           <button id="stop" class="btn ghost" type="button" style="margin:0" disabled>Stop</button>
         </div>
         <div id="status" class="status" aria-live="polite"></div>
+        <div id="notes" class="notes" hidden>
+          <strong>Claude's context clues</strong>
+          <p id="notes-text"></p>
+        </div>
 
         <button id="guess" class="btn ghost" type="button" style="margin:0">Ask Claude to guess the drawing</button>
         <div id="guess-out" class="guess-out" aria-live="polite"></div>
