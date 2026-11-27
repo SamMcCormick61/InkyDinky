@@ -206,3 +206,22 @@ test('a Claude player guesses like a person, then draws on its own turn', async 
     host.close();
   }
 });
+
+test('the host sets how long the drawer has to pick a word (60s by default)', async () => {
+  const host = new Host(makeRoom());
+  const sam = join(host, 'Sam', true);
+  join(host, 'Alex');
+  await tick();
+  sam.send({ t: 'start', settings: { rounds: 1 } });
+  await tick();
+  assert.equal(host.game.settings.chooseTime, 60);
+  host.close();
+  const host2 = new Host(makeRoom());
+  const a = join(host2, 'Sam', true);
+  join(host2, 'Alex');
+  await tick();
+  a.send({ t: 'start', settings: { rounds: 1, chooseTime: 30 } });
+  await tick();
+  assert.equal(host2.game.settings.chooseTime, 30);
+  host2.close();
+});
