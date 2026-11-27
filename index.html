@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>InkyDinky</title>
+  <meta name="description" content="A draw-and-guess party game. Pick a word, draw it, and race your friends to guess.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='%23312e81' d='M32 4c6 10 20 18 20 32a20 20 0 0 1-40 0C12 22 26 14 32 4z'/%3E%3Ccircle cx='25' cy='38' r='4' fill='%23fff'/%3E%3Ccircle cx='39' cy='38' r='4' fill='%23fff'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <svg class="blot" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 4c6 10 20 18 20 32a20 20 0 0 1-40 0C12 22 26 14 32 4z"/><circle cx="25" cy="38" r="4" fill="#fff"/><circle cx="39" cy="38" r="4" fill="#fff"/></svg>
+      <span>InkyDinky</span>
+    </div>
+    <div class="status">
+      <span id="round" class="pill" hidden></span>
+      <span id="hint" class="hint" aria-live="polite"></span>
+      <button id="peek" class="peek" type="button" hidden>Hold to see word</button>
+    </div>
+    <div id="timer" class="timer" hidden>80</div>
+  </header>
+
+  <main class="layout">
+    <section class="board">
+      <div class="canvas-wrap">
+        <canvas id="canvas" aria-label="Drawing canvas"></canvas>
+
+        <!-- Overlays shown on top of the canvas -->
+        <div id="overlay" class="overlay">
+          <!-- Lobby -->
+          <div class="panel" data-screen="lobby">
+            <h1>Let's draw!</h1>
+            <p class="muted">Add everyone who's playing on this device, then pass it round as you take turns.</p>
+            <form id="add-player" class="row">
+              <input id="player-name" maxlength="20" placeholder="Player name" autocomplete="off" required>
+              <button class="btn" type="submit">Add</button>
+            </form>
+            <ul id="lobby-players" class="chips"></ul>
+            <p id="lobby-error" class="error" role="alert"></p>
+            <div class="settings">
+              <label>Rounds
+                <select id="set-rounds"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option></select>
+              </label>
+              <label>Draw time
+                <select id="set-time"><option value="45">45s</option><option value="60">60s</option><option value="80" selected>80s</option><option value="100">100s</option><option value="120">120s</option></select>
+              </label>
+            </div>
+            <button id="start" class="btn big" type="button" disabled>Start game</button>
+          </div>
+
+          <!-- Hand the device over -->
+          <div class="panel" data-screen="handoff">
+            <p class="muted" id="handoff-round"></p>
+            <h1>Pass to <span id="handoff-name"></span></h1>
+            <p class="muted">Everyone else, look away while they pick a word.</p>
+            <button id="ready" class="btn big" type="button">I'm ready</button>
+          </div>
+
+          <!-- Word choice -->
+          <div class="panel" data-screen="choose">
+            <h1>Pick a word to draw</h1>
+            <div id="choices" class="choices"></div>
+          </div>
+
+          <!-- Answer between turns -->
+          <div class="panel" data-screen="reveal">
+            <p class="muted" id="reveal-reason"></p>
+            <h1>The word was <span id="reveal-word" class="accent"></span></h1>
+            <ul id="reveal-points" class="points"></ul>
+            <p class="muted small">Next turn in <span id="reveal-count"></span>…</p>
+          </div>
+
+          <!-- End of game -->
+          <div class="panel" data-screen="gameover">
+            <h1>Game over</h1>
+            <ol id="ranking" class="ranking"></ol>
+            <div class="row center">
+              <button id="again" class="btn big" type="button">Play again</button>
+              <button id="new-players" class="btn ghost" type="button">Change players</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="toolbar" class="toolbar" aria-label="Drawing tools">
+        <div class="tools">
+          <button class="tool active" data-tool="pen" title="Pen (P)" aria-label="Pen">✏️</button>
+          <button class="tool" data-tool="eraser" title="Eraser (E)" aria-label="Eraser">🧽</button>
+          <button class="tool" data-tool="fill" title="Fill (F)" aria-label="Fill">🪣</button>
+        </div>
+        <div id="sizes" class="sizes"></div>
+        <div id="palette" class="palette"></div>
+        <div class="actions">
+          <button id="undo" class="tool" title="Undo (Ctrl+Z)" aria-label="Undo">↶</button>
+          <button id="clear" class="tool" title="Clear" aria-label="Clear">🗑️</button>
+        </div>
+      </div>
+    </section>
+
+    <aside class="side">
+      <h2>Players</h2>
+      <ul id="players" class="players"></ul>
+      <div id="chat" class="chat" aria-live="polite"></div>
+      <form id="guess-form" class="guess">
+        <select id="guesser" aria-label="Who is guessing"></select>
+        <input id="guess" maxlength="100" placeholder="Type your guess…" autocomplete="off" enterkeyhint="send">
+      </form>
+    </aside>
+  </main>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
