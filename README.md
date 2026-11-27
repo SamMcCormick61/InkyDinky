@@ -23,11 +23,24 @@ to the host over WebRTC using [PeerJS](https://peerjs.com/) and its free matchma
 Press **Play on one device**, add everyone's names, then pass the device to whoever is drawing.
 Guessers pick their name next to the guess box. The drawer can press **Hold to see word**.
 
+## AI Lab (Claude draws and guesses)
+
+Open **ai-lab.html** (there's a link on the start screen). Paste your own Claude API key, pick a word, and
+press **Draw it**. Claude writes simple drawing commands, one stroke per line, and the page draws each line
+as soon as it arrives, at hand speed. **Like a person** adds a gentle wobble; **Neat** draws Claude's lines exactly.
+**Ask Claude to guess** sends the canvas to Claude, so you can also draw something yourself and see if Claude gets it.
+
+Your key stays in your browser (optionally remembered on that device) and is only sent to Anthropic.
+Each drawing costs roughly a cent or less, and the page shows the approximate cost.
+
+- `js/ai.js` – talks to Claude (official Anthropic SDK, vendored in `js/vendor/anthropic-sdk.mjs`) and parses the drawing commands
+- `js/pen.js` – plays strokes onto the canvas at hand speed, with optional wobble; it can also send them to other players
+
 ## Roadmap
 
 - [x] Core game on one device: canvas, pen, eraser, fill, colours, sizes, undo, clear, word choice, timer, guessing, scoring, turns
 - [x] Online rooms: a player hosts and friends join from a link on their own devices (peer to peer)
-- [ ] Claude as a player and as a drawer that draws line by line, with room for other AIs later
+- [~] Claude as a player and as a drawer that draws line by line (AI Lab done; next: add Claude to real games)
 - [ ] Polish: more word lists, sounds, touch tweaks
 
 ## Code
