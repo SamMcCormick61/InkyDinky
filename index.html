@@ -66,8 +66,8 @@
                   <select id="online-time"><option value="45">45s</option><option value="60">60s</option><option value="80" selected>80s</option><option value="100">100s</option><option value="120">120s</option></select>
                 </label>
               </div>
-              <details id="ai-box" class="ai-box">
-                <summary><span id="ai-summary">🤖 Let Claude draw for players</span></summary>
+              <details id="ai-box" class="ai-box" open>
+                <summary><span id="ai-summary">🤖 Claude AI: draw for players or join as a player</span></summary>
                 <p class="muted small">When it's their turn, any player can choose to have Claude draw their word for them, stroke by stroke like a person.</p>
                 <label class="ai-key">Your Claude API key
                   <input id="ai-key" type="password" placeholder="sk-ant-…" autocomplete="off" spellcheck="false">
@@ -84,7 +84,11 @@
                   </label>
                 </div>
                 <p class="muted small">Claude runs in your browser and uses your API credit. The key is only sent to Anthropic.</p>
-                <button id="ai-add" class="btn" type="button">Turn Claude on</button>
+                <div class="row center">
+                  <button id="ai-add" class="btn" type="button">Turn Claude on</button>
+                  <button id="ai-player" class="btn ghost" type="button" hidden>Add Claude as a player</button>
+                </div>
+                <p id="ai-player-note" class="muted small" hidden>Claude the player guesses like a person (wrong guesses show in the chat) and draws on its turn with the settings above.</p>
                 <p id="ai-error" class="error" role="alert"></p>
               </details>
               <button id="start-online" class="btn big" type="button" disabled>Waiting for players…</button>

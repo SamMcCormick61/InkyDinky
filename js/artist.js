@@ -49,6 +49,13 @@ export class ClaudeArtist {
     return this.ai.friendlyError(err);
   }
 
+  // Looks at a canvas and returns { guess } (used by the Claude player).
+  async guess({ canvas, avoid = [], signal }) {
+    const result = await this.ai.guessDrawing({ client: this.client, model: this.settings.model, canvas, avoid, signal });
+    this.spent += result.cost || 0;
+    return result;
+  }
+
   // Draws `word`, sending each stroke to `out` ({ liveStart, liveAppend, op })
   // as it goes. Returns { stop(), notes, done }:
   //   notes resolves with Claude's explanation of its context clues (or '')

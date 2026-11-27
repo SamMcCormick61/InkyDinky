@@ -6,6 +6,7 @@
 import { hostRoom, joinRoom, loopback, cleanCode } from './net.js';
 import { Host } from './host.js';
 import { VERSION } from './version.js';
+import { DrawingBoard } from './canvas.js';
 import {
   $, showScreen, setHint, setTimer, setRound, renderPlayers, clearChat, addChat, addLine,
   renderReveal, renderRanking, renderChoices, setToolbar, load, save, loadKey, saveKey,
@@ -320,6 +321,7 @@ export function startOnline(board, { onLocal }) {
     $('room-code').textContent = code;
     $('room-link').value = roomUrl(code);
     $('host-controls').hidden = !amHost;
+    if (amHost && $('ai-box').open) loadArtistLib();
     $('guest-wait').hidden = amHost;
     const enough = s.players.length >= 2;
     $('start-online').disabled = !enough;
@@ -358,6 +360,7 @@ export function startOnline(board, { onLocal }) {
 
   let artist = null;
   let artistLib = null;
+  let player = null; // Claude playing as a player (bot.js)
   const stored = loadKey();
   $('ai-key').value = stored.key;
   $('ai-remember').checked = stored.remembered;
@@ -392,9 +395,12 @@ export function startOnline(board, { onLocal }) {
   }
 
   function showArtist() {
+    $('ai-player').hidden = !artist;
+    $('ai-player-note').hidden = !artist;
+    $('ai-player').textContent = player ? 'Remove Claude player' : 'Add Claude as a player';
     $('ai-add').textContent = artist ? 'Turn Claude off' : 'Turn Claude on';
     $('ai-add').classList.toggle('ghost', Boolean(artist));
-    $('ai-summary').textContent = artist ? '🤖 Claude can draw for players ✓' : '🤖 Let Claude draw for players';
+    $('ai-summary').textContent = artist ? '🤖 Claude AI is on ✓' : '🤖 Claude AI: draw for players or join as a player';
   }
 
   $('ai-box').addEventListener('toggle', () => $('ai-box').open && loadArtistLib());
@@ -416,6 +422,8 @@ export function startOnline(board, { onLocal }) {
   $('ai-add').addEventListener('click', async () => {
     $('ai-error').textContent = '';
     if (artist) {
+      player?.leave();
+      player = null;
       artist = null;
       host?.setArtist(null);
       showArtist();
@@ -432,6 +440,34 @@ export function startOnline(board, { onLocal }) {
     const lib = await loadArtistLib();
     artist = new lib.ClaudeArtist({ apiKey: key, settings: artistSettings() });
     host.setArtist(artist);
+    showArtist();
+  });
+
+  $('ai-player').addEventListener('click', async () => {
+    $('ai-error').textContent = '';
+    if (player) {
+      player.leave();
+      player = null;
+      showArtist();
+      return;
+    }
+    if (!artist || !host) return;
+    const { ClaudePlayer } = await import('./bot.js');
+    const p = new ClaudePlayer({
+      artist,
+      makeBoard: () => new DrawingBoard(document.createElement('canvas')),
+      onStatus: (text, isError) => {
+        if (p.rejected) {
+          if (player === p) player = null;
+          showArtist();
+          $('ai-error').textContent = text;
+          return;
+        }
+        addLine(`🤖 ${text}`, isError ? 'close' : 'sys');
+      },
+    });
+    player = p;
+    p.join(host);
     showArtist();
   });
 

@@ -149,7 +149,8 @@ export async function drawWord({ client, model, word, context = false, onOp = ()
 // ---------- guessing ----------
 
 // Shows Claude the canvas and returns its guess.
-export async function guessDrawing({ client, model, canvas, signal }) {
+// avoid: earlier wrong guesses, so Claude tries something new.
+export async function guessDrawing({ client, model, canvas, avoid = [], signal }) {
   const data = canvas.toDataURL('image/png').split(',')[1];
   const message = await client.beta.messages.create(
     {
@@ -164,7 +165,7 @@ export async function guessDrawing({ client, model, canvas, signal }) {
           role: 'user',
           content: [
             { type: 'image', source: { type: 'base64', media_type: 'image/png', data } },
-            { type: 'text', text: 'What is this a drawing of?' },
+            { type: 'text', text: avoid.length ? `What is this a drawing of? It is not: ${avoid.join(', ')}.` : 'What is this a drawing of?' },
           ],
         },
       ],
