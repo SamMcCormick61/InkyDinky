@@ -12,6 +12,7 @@ import { Game, DEFAULT_SETTINGS } from './game.js';
 import { WORDS } from './words.js';
 import { VERSION } from './version.js';
 
+const CHOOSE_SECONDS = 15;
 
 export class Host {
   constructor(room) {
@@ -149,7 +150,7 @@ export class Host {
           if (g.phase === 'choosing' && g.drawerId === ev.drawerId) {
             g.chooseWord(Math.floor(Math.random() * g.choices.length));
           }
-        }, (g.settings.chooseTime || DEFAULT_SETTINGS.chooseTime) * 1000);
+        }, CHOOSE_SECONDS * 1000);
         break;
       case 'drawing':
         clearTimeout(this.chooseTimer);
@@ -297,9 +298,7 @@ function pickSettings(s = {}) {
   const out = {};
   const rounds = Number(s.rounds);
   const drawTime = Number(s.drawTime);
-  const chooseTime = Number(s.chooseTime);
   if (rounds >= 1 && rounds <= 10) out.rounds = Math.round(rounds);
   if (drawTime >= 20 && drawTime <= 240) out.drawTime = Math.round(drawTime);
-  if (chooseTime >= 5 && chooseTime <= 300) out.chooseTime = Math.round(chooseTime);
   return { ...DEFAULT_SETTINGS, ...out, revealTime: DEFAULT_SETTINGS.revealTime };
 }

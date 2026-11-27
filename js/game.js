@@ -8,7 +8,6 @@ export const DEFAULT_SETTINGS = {
   rounds: 3,        // every player draws once per round
   drawTime: 80,     // seconds to draw each word
   choiceCount: 3,   // words offered to the drawer
-  chooseTime: 60,   // seconds to pick a word online before one is picked for you
   revealTime: 5,    // seconds to show the answer between turns
   maxPlayers: 8,
 };

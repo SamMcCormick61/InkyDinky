@@ -346,10 +346,10 @@ export function startOnline(board, { onLocal }) {
   });
 
   $('start-online').addEventListener('click', () => {
-    send({ t: 'start', settings: { rounds: $('online-rounds').value, drawTime: $('online-time').value, chooseTime: $('online-choose').value } });
+    send({ t: 'start', settings: { rounds: $('online-rounds').value, drawTime: $('online-time').value } });
   });
   $('again').addEventListener('click', () => {
-    send({ t: 'start', settings: { rounds: $('online-rounds').value, drawTime: $('online-time').value, chooseTime: $('online-choose').value } });
+    send({ t: 'start', settings: { rounds: $('online-rounds').value, drawTime: $('online-time').value } });
   });
 
   // ---------- Claude drawing for players (set up by the host) ----------
