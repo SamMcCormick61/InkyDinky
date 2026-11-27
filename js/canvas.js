@@ -60,7 +60,7 @@ export class DrawingBoard {
     c.addEventListener('pointerdown', (e) => {
       if (!this.enabled || (e.pointerType === 'mouse' && e.button !== 0)) return;
       e.preventDefault();
-      const [x, y] = this.toLocal(e);
+      const [x, y] = this.toLocal(e).map(round4);
       if (this.tool === 'fill') {
         this.addOp({ type: 'fill', color: this.color, x, y });
         return;
@@ -73,31 +73,75 @@ export class DrawingBoard {
         points: [[x, y]],
       };
       this.drawDot(this.current);
+      this.pending = [];
+      this.emit({ type: 'live', start: true, color: this.current.color, size: this.current.size, points: [[x, y]] });
+      clearInterval(this.flushTimer);
+      this.flushTimer = setInterval(() => this.flushLive(), 50);
     });
     c.addEventListener('pointermove', (e) => {
       if (!this.current) return;
       e.preventDefault();
       const events = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
       for (const ev of events.length ? events : [e]) {
-        const p = this.toLocal(ev);
+        const p = this.toLocal(ev).map(round4);
         const pts = this.current.points;
         const last = pts[pts.length - 1];
         if (Math.hypot((p[0] - last[0]) * WIDTH, (p[1] - last[1]) * HEIGHT) < 1.5) continue;
         pts.push(p);
+        this.pending.push(p);
         this.drawSegment(this.current, pts.length - 1);
       }
     });
     const finish = () => {
       if (!this.current) return;
+      this.flushLive();
+      clearInterval(this.flushTimer);
       const stroke = this.current;
       this.current = null;
-      stroke.points = stroke.points.map(([x, y]) => [round4(x), round4(y)]);
       this.ops.push(stroke);
       this.emit({ type: 'op', op: stroke });
     };
     c.addEventListener('pointerup', finish);
     c.addEventListener('pointercancel', finish);
     c.addEventListener('lostpointercapture', finish);
+  }
+
+  // Send stroke points to other players in small batches while drawing.
+  flushLive() {
+    if (!this.pending || !this.pending.length) return;
+    this.emit({ type: 'live', points: this.pending });
+    this.pending = [];
+  }
+
+  // ----- drawing coming from someone else -----
+
+  liveStart(color, size, points) {
+    this.remote = { type: 'stroke', color, size, points: [...points] };
+    this.drawDot(this.remote);
+  }
+
+  liveAppend(points) {
+    if (!this.remote) return;
+    for (const p of points) {
+      this.remote.points.push(p);
+      this.drawSegment(this.remote, this.remote.points.length - 1);
+    }
+  }
+
+  // A finished op from the drawer. Strokes were already drawn live; if any
+  // live points went missing, repaint so everyone ends up with the same picture.
+  remoteOp(op) {
+    const live = this.remote;
+    this.remote = null;
+    this.ops.push(op);
+    if (op.type !== 'stroke' || !live) this.applyOp(op);
+    else if (live.points.length !== op.points.length) this.redraw();
+  }
+
+  remoteUndo() {
+    this.remote = null;
+    this.ops.pop();
+    this.redraw();
   }
 
   toLocal(e) {
@@ -129,6 +173,8 @@ export class DrawingBoard {
   reset() {
     this.ops = [];
     this.current = null;
+    this.remote = null;
+    clearInterval(this.flushTimer);
     this.redraw();
     this.emit({ type: 'reset' });
   }
