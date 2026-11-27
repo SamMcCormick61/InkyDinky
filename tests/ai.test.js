@@ -42,3 +42,22 @@ test('context clues setting changes the request', async () => {
   assert.match(sent[0], /^Draw: fish\n\nAlso draw the context/);
   assert.match(sent[1], /^Draw: fish\n\nDraw only the thing itself/);
 });
+
+test('reads Claude\'s note line separately from drawing commands', async () => {
+  const { parseNote, drawWord } = await import('../js/ai.js');
+  assert.equal(parseNote('note The bubbles and weeds show it lives underwater.'), 'The bubbles and weeds show it lives underwater.');
+  assert.equal(parseNote('Note: Snowflakes mean winter.'), 'Snowflakes mean winter.');
+  assert.equal(parseNote('stroke black 2 1,1 2,2'), null);
+  let onText;
+  const fake = { beta: { messages: { stream: () => ({
+    on(ev, fn) { if (ev === 'text') onText = fn; },
+    finalMessage: async () => {
+      onText('stroke blue 2 10,10 20,20\nnote Water and bubbles show where fish live.');
+      return { stop_reason: 'end_turn', content: [], usage: {} };
+    },
+  }) } } };
+  const drawn = [];
+  const r = await drawWord({ client: fake, model: 'claude-haiku-5-5', word: 'fish', context: true, onOp: (op) => drawn.push(op) });
+  assert.equal(drawn.length, 1, 'the note is not drawn');
+  assert.equal(r.notes, 'Water and bubbles show where fish live.');
+});

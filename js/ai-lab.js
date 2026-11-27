@@ -109,6 +109,7 @@ $('draw').addEventListener('click', async () => {
   setToolbar(false);
   $('guess-out').textContent = '';
   $('raw').textContent = '';
+  $('notes').hidden = true;
   $('draw').disabled = true;
   $('stop').disabled = false;
   $('hint').textContent = `Claude is drawing: ${word}`;
@@ -135,6 +136,12 @@ $('draw').addEventListener('click', async () => {
     $('raw').textContent = result.text;
     if (!result.ops.length) throw new Error("Claude didn't send any drawing commands. Try again.");
     await pen.finish();
+    // The explanation is only shown once the drawing is finished, like the end of a turn.
+    if (result.notes) {
+      $('notes-text').textContent = result.notes;
+      $('notes').hidden = false;
+    }
+    $('hint').textContent = `Claude drew: ${word}`;
     status(`Done: ${result.ops.length} lines in ${((performance.now() - started) / 1000).toFixed(1)}s.`);
     addCost(result.cost, 'This drawing');
   } catch (err) {

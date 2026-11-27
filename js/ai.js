@@ -47,7 +47,9 @@ Draw the way a person would in the game: the big recognisable outline first, the
 Never write letters, numbers or words, and never draw the word itself as text.`;
 
 // Extra instruction when "context clues" is on: draw the word's surroundings too.
-export const CONTEXT_HINT = `Also draw the context that goes with it, to help people guess: where it is usually found, what it is used with or does, or the setting around it. For example, a fish in water with bubbles and weeds, a snowman with snowflakes and a scarf, a key next to a lock, an astronaut with a rocket and stars. Draw the word itself first and biggest, then add 2 to 4 smaller context details around it. Still no letters, numbers or words.`;
+export const CONTEXT_HINT = `Also draw the context that goes with it, to help people guess: where it is usually found, what it is used with or does, or the setting around it. For example, a fish in water with bubbles and weeds, a snowman with snowflakes and a scarf, a key next to a lock, an astronaut with a rocket and stars. Draw the word itself first and biggest, then add 2 to 4 smaller context details around it. Still no letters, numbers or words in the drawing.
+
+After the last drawing command, add one line starting with "note " that explains to the players, in one or two short friendly sentences, which context clues you drew and why they go with the word. Players only see the note after the round ends, so it may mention the word.`;
 
 export const NO_CONTEXT_HINT = `Draw only the thing itself, with no background or extra objects.`;
 
@@ -85,6 +87,12 @@ export function parseLine(line) {
   return null;
 }
 
+// Claude's explanation line ("note ..."), shown after the round. Returns the text or null.
+export function parseNote(line) {
+  const m = /^\s*note\s*:?\s+(.+)$/i.exec(line);
+  return m ? m[1].trim().slice(0, 400) : null;
+}
+
 // ---------- drawing ----------
 
 // Asks Claude to draw a word. Calls onOp(op) for each finished command as it
@@ -106,7 +114,13 @@ export async function drawWord({ client, model, word, context = false, onOp = ()
   let buffer = '';
   let text = '';
   const ops = [];
+  const notes = [];
   const take = (line) => {
+    const note = parseNote(line);
+    if (note) {
+      notes.push(note);
+      return;
+    }
     const op = parseLine(line);
     if (op) {
       ops.push(op);
@@ -129,7 +143,7 @@ export async function drawWord({ client, model, word, context = false, onOp = ()
   if (message.stop_reason === 'refusal') {
     throw new Error("Claude declined to draw that word. Try another one.");
   }
-  return { ops, text, usage: message.usage, cost: costOf(message.model || model, message.usage), model: message.model };
+  return { ops, notes: notes.join(' '), text, usage: message.usage, cost: costOf(message.model || model, message.usage), model: message.model };
 }
 
 // ---------- guessing ----------
