@@ -6,6 +6,7 @@
 
 import { Game, DEFAULT_SETTINGS } from './game.js';
 import { WORDS } from './words.js';
+import { VERSION } from './version.js';
 
 const CHOOSE_SECONDS = 15;
 
@@ -56,7 +57,7 @@ export class Host {
         const player = g.addPlayer(msg.name);
         this.clients.set(conn, player.id);
         if (msg.isHost && !this.hostPlayerId) this.hostPlayerId = player.id;
-        conn.send({ t: 'welcome', id: player.id, hostId: this.hostPlayerId, code: this.room.code });
+        conn.send({ t: 'welcome', id: player.id, hostId: this.hostPlayerId, code: this.room.code, version: VERSION });
         conn.send({ t: 'board', ops: this.ops });
         this.broadcast({ t: 'note', text: `${player.name} joined.` }, conn);
         this.syncAll();

@@ -5,6 +5,9 @@ import { DrawingBoard } from './canvas.js';
 import { buildToolbar, setToolbar } from './ui.js';
 import { startLocal } from './local.js';
 import { startOnline } from './online.js';
+import { VERSION } from './version.js';
+
+document.getElementById('version').textContent = `v${VERSION}`;
 
 const board = new DrawingBoard(document.getElementById('canvas'));
 buildToolbar(board);
