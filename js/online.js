@@ -5,6 +5,7 @@
 
 import { hostRoom, joinRoom, loopback, cleanCode } from './net.js';
 import { Host } from './host.js';
+import { VERSION } from './version.js';
 import {
   $, showScreen, setHint, setTimer, setRound, renderPlayers, clearChat, addChat, addLine,
   renderReveal, renderRanking, renderChoices, setToolbar, load, save,
@@ -153,6 +154,9 @@ export function startOnline(board, { onLocal }) {
         code = msg.code;
         clearChat();
         addLine(host ? `Room ${code} is open. Share the link to invite friends.` : `You joined room ${code}.`);
+        if (msg.version && msg.version !== VERSION) {
+          addLine(`The host has version ${msg.version} and you have ${VERSION}. If anything looks odd, both of you should refresh the page.`, 'close');
+        }
         break;
       case 'reject':
         busy(false, msg.reason);

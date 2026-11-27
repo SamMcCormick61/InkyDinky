@@ -47,3 +47,8 @@ No build step, just static files served by GitHub Pages.
 
 Run locally with any static server, for example `python3 -m http.server`, then open http://localhost:8000.
 Run the engine tests with `npm test` (Node 20+).
+
+## Releasing
+
+Bump `VERSION` in `js/version.js` with every change you publish. It shows next to the logo, and online
+players get a note if their version doesn't match the host's (GitHub Pages can serve a cached copy for up to 10 minutes, so a refresh fixes it).
