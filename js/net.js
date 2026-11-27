@@ -9,6 +9,8 @@
 // BroadcastChannel version that links tabs of the same browser, which is handy
 // for testing without the internet.
 
+import { iceServers } from './relay.js';
+
 const PREFIX = 'inkydinky-';
 const CODE_LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
 
@@ -111,11 +113,12 @@ function friendlyPeerError(err) {
 export async function hostRoom() {
   if (useLocalNet()) return hostLocal();
   const Peer = await loadPeerJs();
+  const config = { iceServers: await iceServers() };
   for (let attempt = 0; attempt < 4; attempt++) {
     const code = makeRoomCode();
     try {
       const peer = await new Promise((resolve, reject) => {
-        const p = new Peer(PREFIX + code.toLowerCase(), { debug: 0 });
+        const p = new Peer(PREFIX + code.toLowerCase(), { debug: 0, config });
         p.once('open', () => resolve(p));
         p.once('error', (err) => {
           p.destroy();
@@ -150,9 +153,10 @@ export async function joinRoom(code, onProgress = () => {}) {
   if (useLocalNet()) return joinLocal(code);
   onProgress('Loading…');
   const Peer = await loadPeerJs();
+  const config = { iceServers: await iceServers() };
   return new Promise((resolve, reject) => {
     onProgress('Contacting the matchmaking server…');
-    const peer = new Peer({ debug: 0 });
+    const peer = new Peer({ debug: 0, config });
     let settled = false;
     let stage = 'server';
     const fail = (err) => {
