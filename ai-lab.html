@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>InkyDinky AI Lab</title>
+  <meta name="description" content="Watch Claude draw a word line by line, and let Claude guess drawings.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='%23312e81' d='M32 4c6 10 20 18 20 32a20 20 0 0 1-40 0C12 22 26 14 32 4z'/%3E%3Ccircle cx='25' cy='38' r='4' fill='%23fff'/%3E%3Ccircle cx='39' cy='38' r='4' fill='%23fff'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .lab { display: flex; flex-direction: column; gap: 12px; padding: 14px; overflow-y: auto; }
+    .lab label { display: flex; flex-direction: column; gap: 4px; font-size: .85rem; color: var(--muted); }
+    .lab .row input { flex: 1; }
+    .lab .btn { width: 100%; }
+    .lab .pair { display: flex; gap: 8px; }
+    .lab .pair .btn { flex: 1; }
+    .lab .note { font-size: .8rem; color: var(--muted); margin: 0; }
+    .lab .note a { color: var(--ink-2); }
+    .seg { display: flex; border: 2px solid var(--line); border-radius: 10px; overflow: hidden; }
+    .seg button { flex: 1; border: 0; background: #fff; padding: 8px; cursor: pointer; font-weight: 600; color: var(--muted); }
+    .seg button.on { background: var(--ink-soft); color: var(--ink); }
+    .status { min-height: 1.4em; font-weight: 600; color: var(--ink); }
+    .status.err { color: var(--bad); }
+    .guess-out { font-size: 1.3rem; font-weight: 800; color: var(--ink-2); text-align: center; min-height: 1.6em; }
+    details pre { white-space: pre-wrap; word-break: break-all; font-size: .75rem; background: var(--bg); padding: 8px; border-radius: 8px; max-height: 180px; overflow: auto; }
+    .stats { font-size: .8rem; color: var(--muted); }
+    .keyrow { display: flex; gap: 6px; align-items: center; font-size: .8rem; color: var(--muted); }
+    .keyrow input { width: auto; }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <svg class="blot" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 4c6 10 20 18 20 32a20 20 0 0 1-40 0C12 22 26 14 32 4z"/><circle cx="25" cy="38" r="4" fill="#fff"/><circle cx="39" cy="38" r="4" fill="#fff"/></svg>
+      <span>InkyDinky</span>
+      <small id="version" class="version"></small>
+    </div>
+    <div class="status-wrap" style="flex:1;text-align:center"><span id="hint" class="hint plain">AI Lab</span></div>
+    <a href="./" class="pill" style="color:#fff;text-decoration:none">← Game</a>
+  </header>
+
+  <main class="layout">
+    <section class="board">
+      <div class="canvas-wrap">
+        <canvas id="canvas" aria-label="Drawing canvas"></canvas>
+      </div>
+      <div id="toolbar" class="toolbar" aria-label="Drawing tools">
+        <div class="tools">
+          <button class="tool active" data-tool="pen" title="Pen (P)" aria-label="Pen">✏️</button>
+          <button class="tool" data-tool="eraser" title="Eraser (E)" aria-label="Eraser">🧽</button>
+          <button class="tool" data-tool="fill" title="Fill (F)" aria-label="Fill">🪣</button>
+        </div>
+        <div id="sizes" class="sizes"></div>
+        <div id="palette" class="palette"></div>
+        <div class="actions">
+          <button id="undo" class="tool" title="Undo (Ctrl+Z)" aria-label="Undo">↶</button>
+          <button id="clear" class="tool" title="Clear" aria-label="Clear">🗑️</button>
+        </div>
+      </div>
+    </section>
+
+    <aside class="side">
+      <h2>Claude AI Lab</h2>
+      <div class="lab">
+        <label>Your Claude API key
+          <input id="api-key" type="password" placeholder="sk-ant-…" autocomplete="off" spellcheck="false">
+        </label>
+        <div class="keyrow"><input id="remember" type="checkbox"><label for="remember" style="flex-direction:row">Remember on this device</label></div>
+        <p class="note">Your key stays in this browser and is only sent to Anthropic. Get one at <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>.</p>
+
+        <label>Model
+          <select id="model"></select>
+        </label>
+
+        <label>Word for Claude to draw
+          <div class="row">
+            <input id="word" maxlength="40" placeholder="e.g. lighthouse" autocomplete="off">
+            <button id="random-word" class="btn ghost" type="button" style="width:auto;margin:0" title="Random word">🎲</button>
+          </div>
+        </label>
+
+        <div>
+          <div class="seg" role="radiogroup" aria-label="Drawing style">
+            <button type="button" data-style="human" class="on">Like a person</button>
+            <button type="button" data-style="neat">Neat</button>
+          </div>
+        </div>
+
+        <label>Drawing speed
+          <input id="speed" type="range" min="0.5" max="3" step="0.25" value="1">
+        </label>
+
+        <div class="pair">
+          <button id="draw" class="btn" type="button">Draw it</button>
+          <button id="stop" class="btn ghost" type="button" style="margin:0" disabled>Stop</button>
+        </div>
+        <div id="status" class="status" aria-live="polite"></div>
+
+        <button id="guess" class="btn ghost" type="button" style="margin:0">Ask Claude to guess the drawing</button>
+        <div id="guess-out" class="guess-out" aria-live="polite"></div>
+        <p class="note">Draw something yourself, or let Claude draw, then ask Claude to guess.</p>
+
+        <div id="stats" class="stats"></div>
+        <details>
+          <summary class="note">Claude's raw drawing commands</summary>
+          <pre id="raw"></pre>
+        </details>
+      </div>
+    </aside>
+  </main>
+
+  <script type="module" src="js/ai-lab.js"></script>
+</body>
+</html>
