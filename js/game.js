@@ -6,7 +6,7 @@
 
 export const DEFAULT_SETTINGS = {
   rounds: 3,        // every player draws once per round
-  drawTime: 80,     // seconds to draw each word
+  drawTime: 60,     // seconds to draw and guess each word
   choiceCount: 3,   // words offered to the drawer
   revealTime: 5,    // seconds to show the answer between turns
   maxPlayers: 8,
